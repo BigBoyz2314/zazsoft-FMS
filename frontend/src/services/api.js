@@ -10,9 +10,13 @@ const getApiBase = () => {
   }
   
   // Bulletproof relative resolution across local XAMPP, subdomains, subfolders, and root domains on Hostinger hPanel
-  const isDist = loc.pathname.includes('/dist');
-  const relPath = isDist ? '../api' : './api';
-  return new URL(relPath, loc.href).href.replace(/\/+$/, '');
+  const cleanPath = loc.pathname.replace(/\/index\.html$/i, '');
+  if (cleanPath.includes('/dist')) {
+    const basePath = cleanPath.substring(0, cleanPath.indexOf('/dist'));
+    return `${loc.origin}${basePath}/api`;
+  }
+  const basePath = cleanPath.replace(/\/[^/]*$/, '');
+  return `${loc.origin}${basePath}/api`;
 };
 
 const API_BASE = getApiBase();

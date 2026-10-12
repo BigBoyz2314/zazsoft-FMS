@@ -28,13 +28,21 @@ export default function Settings({ currentUser, onUserUpdated }) {
     }
   }, [currentUser]);
 
+  const [loadError, setLoadError] = useState('');
+
   const loadSettings = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const res = await api.getSettings();
-      if (res.success) setSettings(res.settings);
+      if (res.success && res.settings) {
+        setSettings(res.settings);
+      } else {
+        setLoadError('Unable to load settings from server.');
+      }
     } catch (err) {
       console.error(err);
+      setLoadError(err.message || 'Error loading settings');
     } finally {
       setLoading(false);
     }
@@ -64,8 +72,21 @@ export default function Settings({ currentUser, onUserUpdated }) {
     }
   };
 
-  if (loading || !settings) {
+  if (loading) {
     return <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Loading Settings...</div>;
+  }
+
+  if (loadError || !settings) {
+    return (
+      <div style={{ padding: '40px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ color: 'var(--danger)', fontSize: '0.9rem' }}>
+          {loadError || 'Settings data not found.'}
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={loadSettings} style={{ width: 'fit-content' }}>
+          Retry Loading Settings
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -82,8 +82,29 @@ function ensureUsersTable($pdo) {
     }
 }
 
-// Auto-ensure table on load
+function ensureSettingsTable($pdo) {
+    try {
+        $count = $pdo->query("SELECT COUNT(*) FROM `settings`")->fetchColumn();
+        if ($count == 0) {
+            $defaultTerms = "Product Shall Be Used for One Business Unit Only\nNo Responsibility for Any Wrong Data Entry!\n24/7 SLA Support (Service Level Agreement)\nStrict Data Privacy / Security Policy";
+            $addrPk = "H 219, Molana Ahmad Ali Road, Ravi Road Lahore, Pakistan";
+            $addrUae = "2001, Prime Tower, Business Bay, Dubai, UAE";
+
+            $stmt = $pdo->prepare("
+                INSERT INTO `settings` 
+                (`id`, `company_name`, `tagline`, `email`, `website`, `phone_pk`, `phone_uae`, `address_pk`, `address_uae`, `default_currency`, `default_terms`, `bank_name`, `account_title`, `account_number`, `iban`, `swift_code`, `show_uae_address`, `show_bank_details`)
+                VALUES (1, 'ZAZ Soft', 'At Your Service Always', 'zazimran@gmail.com', 'www.zazsoft.com', '+92 309 9507777', '+971 52 7772758', ?, ?, 'PKR', ?, 'Meezan Bank Limited', 'ZAZ Soft', '0101-0102030405', 'PK36MEZN0001010102030405', 'MEZNPKKA', 1, 1)
+            ");
+            $stmt->execute([$addrPk, $addrUae, $defaultTerms]);
+        }
+    } catch (\Exception $e) {
+        // Silently continue
+    }
+}
+
+// Auto-ensure tables on load
 ensureUsersTable($pdo);
+ensureSettingsTable($pdo);
 
 function getBearerToken() {
     $header = null;
