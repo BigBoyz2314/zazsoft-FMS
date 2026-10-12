@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Lock, Mail, Eye, EyeOff, ShieldCheck, 
-  ArrowRight, Loader2, AlertCircle, Sun, Moon, KeyRound, Sparkles
+  ArrowRight, Loader2, AlertCircle, Sun, Moon
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -34,12 +34,6 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (demoEmail) => {
-    setEmail(demoEmail);
-    setPassword('admin123');
-    setError('');
   };
 
   return (
@@ -109,7 +103,7 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
                   id="login-email"
                   type="email"
                   className="form-control with-icon-left"
-                  placeholder="admin@zazsoft.com"
+                  placeholder="name@zazsoft.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
@@ -177,34 +171,6 @@ export default function Login({ onLoginSuccess, theme, toggleTheme }) {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credential Fillers */}
-          <div className="login-demo-box">
-            <div className="demo-box-header">
-              <KeyRound size={13} style={{ color: '#F59E0B' }} />
-              <span>Default Admin Accounts</span>
-            </div>
-            <div className="demo-chips">
-              <button
-                type="button"
-                className="demo-chip"
-                onClick={() => handleQuickFill('admin@zazsoft.com')}
-                title="Click to auto-fill admin@zazsoft.com / admin123"
-              >
-                <Sparkles size={12} />
-                <span>admin@zazsoft.com</span>
-              </button>
-              <button
-                type="button"
-                className="demo-chip"
-                onClick={() => handleQuickFill('zazimran@gmail.com')}
-                title="Click to auto-fill zazimran@gmail.com / admin123"
-              >
-                <Sparkles size={12} />
-                <span>zazimran@gmail.com</span>
-              </button>
-            </div>
-          </div>
 
           {/* Footer note */}
           <div className="login-card-footer">

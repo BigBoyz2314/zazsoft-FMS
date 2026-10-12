@@ -17,17 +17,8 @@ A Financial Management & Client Retainer System built for **ZAZSoft** (Software 
 - **Multi-Currency Support**: Primary in PKR, with native support for AED (Dubai branch), USD, EUR, and GBP.
 - **Dark & Light Mode**: Glassmorphic dark aesthetic with instant toggle to crisp light mode.
 
----
-
-## 🔐 Default Login Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| **System Admin** | `admin@zazsoft.com` | `admin123` |
-| **Owner Account** | `zazimran@gmail.com` | `admin123` |
-
-> [!TIP]
-> You can change your name, email, and password anytime under the **Settings & Branding** tab ➔ **Administrator Account & Security**.
+> [!NOTE]
+> System administrator accounts are initialized on first launch. You can configure your account details and password anytime under the **Settings & Branding** tab ➔ **Administrator Account & Security**.
 
 ---
 
