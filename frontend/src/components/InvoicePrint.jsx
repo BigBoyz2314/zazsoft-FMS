@@ -77,9 +77,6 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                       }}
                     />
                     <div>
-                      <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-                        {settings.company_name || 'ZAZ Soft'}
-                      </h1>
                       <div style={{ fontSize: '0.8rem', color: '#0284C7', fontWeight: 600 }}>
                         {settings.tagline || 'At Your Service Always'}
                       </div>
