@@ -8,6 +8,7 @@ A Financial Management & Client Retainer System built for **ZAZSoft** (Software 
 
 ## 🚀 Features
 
+- **Secure Authentication**: Enterprise session token authentication, remember-me support, profile & password management in Settings, and pre-seeded admin accounts.
 - **Branded Invoicing**: Exact replica of ZAZSoft's official corporate invoice template with multi-branch addresses (Lahore & Dubai), bank wire settlement info, and formal print/PDF export.
 - **Projects & Retainers**: Manage recurring monthly software maintenance retainers with automatic Monthly Recurring Revenue (MRR) tracking and 1-click monthly invoice generation.
 - **Client Ledgers (CRM)**: Full statement of accounts, transaction histories, balance tracking, and contact management.
@@ -15,6 +16,18 @@ A Financial Management & Client Retainer System built for **ZAZSoft** (Software 
 - **Financial Analytics**: Inflow vs Outflow trend charts, receivables tracking, and overdue aging alerts.
 - **Multi-Currency Support**: Primary in PKR, with native support for AED (Dubai branch), USD, EUR, and GBP.
 - **Dark & Light Mode**: Glassmorphic dark aesthetic with instant toggle to crisp light mode.
+
+---
+
+## 🔐 Default Login Credentials
+
+| Role | Email | Password |
+|---|---|---|
+| **System Admin** | `admin@zazsoft.com` | `admin123` |
+| **Owner Account** | `zazimran@gmail.com` | `admin123` |
+
+> [!TIP]
+> You can change your name, email, and password anytime under the **Settings & Branding** tab ➔ **Administrator Account & Security**.
 
 ---
 

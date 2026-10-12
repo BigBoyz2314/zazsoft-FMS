@@ -40,6 +40,21 @@ try {
         $pdo->exec($sql);
     }
 
+    // Seed Users if empty
+    $stmt = $pdo->query("SELECT COUNT(*) FROM `users`");
+    if ($stmt->fetchColumn() == 0) {
+        $insUser = $pdo->prepare("
+            INSERT INTO `users` 
+            (`name`, `email`, `password_hash`, `role`)
+            VALUES (?, ?, ?, ?)
+        ");
+        $hashedDefault = password_hash('admin123', PASSWORD_BCRYPT);
+        // Primary administrator
+        $insUser->execute(['ZAZ Admin', 'admin@zazsoft.com', $hashedDefault, 'admin']);
+        // Owner account
+        $insUser->execute(['Zaz Imran', 'zazimran@gmail.com', $hashedDefault, 'admin']);
+    }
+
     // Seed Settings if empty
     $stmt = $pdo->query("SELECT COUNT(*) FROM `settings`");
     if ($stmt->fetchColumn() == 0) {

@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building2, Save, MapPin, Phone, Mail, Globe, 
-  CreditCard, ShieldCheck, CheckCircle2, Image as ImageIcon
+  CreditCard, ShieldCheck, CheckCircle2, Image as ImageIcon,
+  Key, Lock, User, UserCheck, AlertCircle
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
 
-export default function Settings() {
+export default function Settings({ currentUser, onUserUpdated }) {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Profile & Security state
+  const [profileName, setProfileName] = useState(currentUser?.name || '');
+  const [profileEmail, setProfileEmail] = useState(currentUser?.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
+
+  useEffect(() => {
+    if (currentUser) {
+      setProfileName(currentUser.name || '');
+      setProfileEmail(currentUser.email || '');
+    }
+  }, [currentUser]);
 
   const loadSettings = async () => {
     try {
@@ -302,6 +319,148 @@ export default function Settings() {
         </div>
 
       </form>
+
+      {/* Account Security & Password Card */}
+      <div className="card" style={{ marginTop: '10px' }}>
+        <div className="card-header">
+          <div className="card-title">
+            <Key size={18} style={{ color: '#F59E0B' }} />
+            <span>Administrator Account & Security</span>
+          </div>
+        </div>
+
+        {profileSuccess && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            background: 'var(--success-bg)',
+            border: '1px solid var(--success-border)',
+            color: 'var(--success)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.84rem',
+            marginBottom: '16px'
+          }}>
+            <CheckCircle2 size={16} />
+            <span>{profileSuccess}</span>
+          </div>
+        )}
+
+        {profileError && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 14px',
+            background: 'var(--danger-bg)',
+            border: '1px solid var(--danger-border)',
+            color: 'var(--danger)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.84rem',
+            marginBottom: '16px'
+          }}>
+            <AlertCircle size={16} />
+            <span>{profileError}</span>
+          </div>
+        )}
+
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          try {
+            setUpdatingProfile(true);
+            setProfileSuccess('');
+            setProfileError('');
+            const res = await api.updateProfile({
+              name: profileName,
+              email: profileEmail,
+              current_password: currentPassword,
+              new_password: newPassword
+            });
+            if (res.success) {
+              setProfileSuccess('Profile & security credentials updated successfully!');
+              setCurrentPassword('');
+              setNewPassword('');
+              authStorage.setUser(res.user);
+              if (onUserUpdated) onUserUpdated(res.user);
+              setTimeout(() => setProfileSuccess(''), 4000);
+            }
+          } catch (err) {
+            setProfileError(err.message || 'Failed to update credentials.');
+          } finally {
+            setUpdatingProfile(false);
+          }
+        }}>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">Full Name</label>
+              <input 
+                type="text" 
+                className="form-control"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Login Email</label>
+              <input 
+                type="email" 
+                className="form-control"
+                value={profileEmail}
+                onChange={(e) => setProfileEmail(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ 
+            marginTop: '12px', 
+            paddingTop: '16px', 
+            borderTop: '1px dashed var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Change Password (Leave blank to keep current password)
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Current Password</label>
+                <input 
+                  type="password" 
+                  className="form-control"
+                  placeholder="Enter current password to authorize change"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">New Password</label>
+                <input 
+                  type="password" 
+                  className="form-control"
+                  placeholder="Minimum 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button 
+              type="submit" 
+              className="btn btn-primary"
+              disabled={updatingProfile}
+            >
+              {updatingProfile ? 'Updating Credentials...' : 'Save Account & Password'}
+            </button>
+          </div>
+        </form>
+      </div>
 
     </div>
   );

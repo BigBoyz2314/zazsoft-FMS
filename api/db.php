@@ -51,3 +51,100 @@ function jsonResponse($data, $statusCode = 200) {
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     exit;
 }
+
+function ensureUsersTable($pdo) {
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS `users` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `name` VARCHAR(100) NOT NULL,
+                `email` VARCHAR(120) NOT NULL UNIQUE,
+                `password_hash` VARCHAR(255) NOT NULL,
+                `role` ENUM('admin', 'manager', 'accountant') DEFAULT 'admin',
+                `avatar` VARCHAR(255) NULL,
+                `auth_token` VARCHAR(255) NULL,
+                `token_expiry` DATETIME NULL,
+                `last_login` DATETIME NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB;
+        ");
+
+        $count = $pdo->query("SELECT COUNT(*) FROM `users`")->fetchColumn();
+        if ($count == 0) {
+            $hashed = password_hash('admin123', PASSWORD_BCRYPT);
+            $stmt = $pdo->prepare("INSERT INTO `users` (`name`, `email`, `password_hash`, `role`) VALUES (?, ?, ?, ?)");
+            $stmt->execute(['ZAZ Admin', 'admin@zazsoft.com', $hashed, 'admin']);
+            $stmt->execute(['Zaz Imran', 'zazimran@gmail.com', $hashed, 'admin']);
+        }
+    } catch (\Exception $e) {
+        // Table check failed silently
+    }
+}
+
+// Auto-ensure table on load
+ensureUsersTable($pdo);
+
+function getBearerToken() {
+    $header = null;
+    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $header = trim($_SERVER['HTTP_AUTHORIZATION']);
+    } elseif (isset($_SERVER['REDIRECT_HTTP_AUTHORIZATION'])) {
+        $header = trim($_SERVER['REDIRECT_HTTP_AUTHORIZATION']);
+    } elseif (function_exists('apache_request_headers')) {
+        $requestHeaders = apache_request_headers();
+        if (isset($requestHeaders['Authorization'])) {
+            $header = trim($requestHeaders['Authorization']);
+        } elseif (isset($requestHeaders['authorization'])) {
+            $header = trim($requestHeaders['authorization']);
+        }
+    }
+
+    if (!empty($header) && preg_match('/Bearer\s(\S+)/i', $header, $matches)) {
+        return $matches[1];
+    }
+
+    // Query or POST parameter fallback
+    if (!empty($_GET['token'])) {
+        return trim($_GET['token']);
+    }
+    if (!empty($_POST['token'])) {
+        return trim($_POST['token']);
+    }
+
+    return null;
+}
+
+function getAuthenticatedUser($pdo) {
+    $token = getBearerToken();
+    if (!$token) {
+        return null;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT id, name, email, role, avatar, last_login 
+            FROM users 
+            WHERE auth_token = ? 
+              AND (token_expiry IS NULL OR token_expiry > NOW())
+            LIMIT 1
+        ");
+        $stmt->execute([$token]);
+        $user = $stmt->fetch();
+        return $user ?: null;
+    } catch (\Exception $e) {
+        return null;
+    }
+}
+
+function requireAuth($pdo) {
+    $user = getAuthenticatedUser($pdo);
+    if (!$user) {
+        jsonResponse([
+            'success' => false,
+            'message' => 'Unauthorized. Please sign in to access this resource.'
+        ], 401);
+    }
+    return $user;
+}
+

@@ -1,5 +1,8 @@
 // API Client Service for ZAZSoft FMS
 
+const TOKEN_KEY = 'zazsoft_fms_auth_token';
+const USER_KEY = 'zazsoft_fms_auth_user';
+
 const getApiBase = () => {
   const loc = window.location;
   if (loc.port === '5173') {
@@ -14,20 +17,71 @@ const getApiBase = () => {
 
 const API_BASE = getApiBase();
 
+export const authStorage = {
+  getToken: () => {
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null;
+  },
+  setToken: (token, remember = true) => {
+    if (remember) {
+      localStorage.setItem(TOKEN_KEY, token);
+      sessionStorage.removeItem(TOKEN_KEY);
+    } else {
+      sessionStorage.setItem(TOKEN_KEY, token);
+      localStorage.removeItem(TOKEN_KEY);
+    }
+  },
+  getUser: () => {
+    const raw = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
+    try {
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+  setUser: (user, remember = true) => {
+    const serialized = JSON.stringify(user);
+    if (remember) {
+      localStorage.setItem(USER_KEY, serialized);
+      sessionStorage.removeItem(USER_KEY);
+    } else {
+      sessionStorage.setItem(USER_KEY, serialized);
+      localStorage.removeItem(USER_KEY);
+    }
+  },
+  clear: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem(USER_KEY);
+  }
+};
+
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}/${endpoint}`;
+  const token = authStorage.getToken();
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
     ...options,
+    headers,
   };
 
   try {
     const res = await fetch(url, config);
     const data = await res.json();
     if (!res.ok) {
+      if (res.status === 401 && !endpoint.includes('action=login')) {
+        authStorage.clear();
+        window.dispatchEvent(new CustomEvent('zazsoft_unauthorized'));
+      }
       throw new Error(data.message || `Request failed with status ${res.status}`);
     }
     return data;
@@ -38,6 +92,34 @@ async function request(endpoint, options = {}) {
 }
 
 export const api = {
+  // Auth
+  login: async (email, password, rememberMe = true) => {
+    const res = await request('auth.php?action=login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, remember_me: rememberMe }),
+    });
+    if (res.success && res.token) {
+      authStorage.setToken(res.token, rememberMe);
+      authStorage.setUser(res.user, rememberMe);
+    }
+    return res;
+  },
+  logout: async () => {
+    try {
+      await request('auth.php?action=logout', { method: 'POST' });
+    } catch {
+      // Clear client session anyway
+    } finally {
+      authStorage.clear();
+    }
+  },
+  getMe: () => request('auth.php?action=me'),
+  updateProfile: (profileData) =>
+    request('auth.php?action=update_profile', {
+      method: 'POST',
+      body: JSON.stringify(profileData),
+    }),
+
   // Dashboard
   getDashboard: () => request('dashboard.php'),
 

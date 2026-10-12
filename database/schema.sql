@@ -1,6 +1,18 @@
--- Database Schema for ZAZSoft FMS
-CREATE DATABASE IF NOT EXISTS `zazsoft_fms` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `zazsoft_fms`;
+
+-- Users table
+CREATE TABLE IF NOT EXISTS `users` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `name` VARCHAR(100) NOT NULL,
+    `email` VARCHAR(120) NOT NULL UNIQUE,
+    `password_hash` VARCHAR(255) NOT NULL,
+    `role` ENUM('admin', 'manager', 'accountant') DEFAULT 'admin',
+    `avatar` VARCHAR(255) NULL,
+    `auth_token` VARCHAR(255) NULL,
+    `token_expiry` DATETIME NULL,
+    `last_login` DATETIME NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
 -- Settings table
 CREATE TABLE IF NOT EXISTS `settings` (

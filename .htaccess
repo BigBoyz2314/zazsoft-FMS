@@ -10,6 +10,9 @@
     RewriteRule ^\.git - [F,L]
     RewriteRule ^\.env - [F,L]
 
+    # Pass Authorization header to PHP
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     # Ensure API requests pass directly to the api folder
     RewriteCond %{REQUEST_URI} ^/api/ [NC]
     RewriteRule .* - [L]
