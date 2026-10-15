@@ -1,8 +1,20 @@
-import React, { useRef } from 'react';
-import { Printer, Download, X } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Printer, X } from 'lucide-react';
 
 export default function InvoicePrint({ invoiceData, onClose }) {
-  const { invoice, items = [], settings = {} } = invoiceData || {};
+  const invoice = invoiceData?.invoice || (invoiceData?.invoice_number ? invoiceData : null);
+  const items = invoiceData?.items || invoice?.items || [];
+  const settings = invoiceData?.settings || {};
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   if (!invoice) return null;
 
@@ -10,6 +22,8 @@ export default function InvoicePrint({ invoiceData, onClose }) {
   const formatDateFormal = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+
     const day = d.getDate();
     let suffix = 'th';
     if (day % 10 === 1 && day !== 11) suffix = 'st';
@@ -26,7 +40,15 @@ export default function InvoicePrint({ invoiceData, onClose }) {
   };
 
   const handlePrint = () => {
+    const originalTitle = document.title;
+    const invNum = invoice.invoice_number || invoice.ref_no || 'Document';
+    document.title = `Invoice_${invNum}`;
+
     window.print();
+
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1000);
   };
 
   const termsLines = (invoice.terms_and_conditions || settings.default_terms || '')
@@ -34,23 +56,28 @@ export default function InvoicePrint({ invoiceData, onClose }) {
     .map(t => t.trim())
     .filter(Boolean);
 
-  const currency = invoice.currency || 'PKR';
+  const currency = invoice.currency || settings.default_currency || 'PKR';
   const logoUrl = './assets/images/zazsoft.png';
 
+  const hasTax = Number(invoice.tax_amount) > 0;
+  const hasDiscount = Number(invoice.discount_amount) > 0;
+  const hasPaid = Number(invoice.paid_amount) > 0;
+  const hasBalance = Number(invoice.balance_due) > 0;
+
   return (
-    <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '920px', maxHeight: '96vh' }}>
+    <div className="modal-overlay invoice-print-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal-content invoice-print-modal" style={{ maxWidth: '920px', maxHeight: '96vh' }}>
         <div className="modal-header no-print">
           <div>
             <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700 }}>
               Invoice Preview — {invoice.invoice_number}
             </h3>
             <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Ref No: {invoice.ref_no} &bull; Client: {invoice.company_name}
+              Ref No: {invoice.ref_no || 'N/A'} &bull; Client: {invoice.company_name || invoice.client_name || 'Valued Client'}
             </span>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="btn btn-primary" onClick={handlePrint}>
+            <button className="btn btn-primary" onClick={handlePrint} id="btn-print-invoice">
               <Printer size={16} /> Print / Save as PDF
             </button>
             <button className="btn btn-secondary" onClick={onClose}>
@@ -59,7 +86,7 @@ export default function InvoicePrint({ invoiceData, onClose }) {
           </div>
         </div>
 
-        <div className="modal-body" style={{ background: '#475569', padding: '24px', overflowY: 'auto' }}>
+        <div className="modal-body invoice-print-body">
           <div className="invoice-preview-container" style={{ padding: 0 }}>
             {/* The Authentic A4 Sheet */}
             <div className="invoice-a4-sheet" id="printable-invoice-content">
@@ -73,7 +100,11 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                       alt="ZAZSoft Logo" 
                       className="inv-logo-img"
                       onError={(e) => {
-                        e.target.style.display = 'none';
+                        if (e.target.src.indexOf('assets/images/zazsoft.png') !== -1) {
+                          e.target.src = './zazsoft.png';
+                        } else {
+                          e.target.style.display = 'none';
+                        }
                       }}
                     />
                     <div>
@@ -100,13 +131,13 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                     <div>
                       <span className="inv-meta-label">Company:</span>
                       <span style={{ color: '#1E293B' }}>
-                        {invoice.company_name}
+                        {invoice.company_name || '—'}
                         {invoice.client_city ? ` (${invoice.client_city}, ${invoice.client_country || 'Pakistan'})` : ''}
                       </span>
                     </div>
                     <div>
                       <span className="inv-meta-label">Subject:</span>
-                      <strong style={{ color: '#0284C7' }}>{invoice.subject}</strong>
+                      <strong style={{ color: '#0284C7' }}>{invoice.subject || 'Project Billing'}</strong>
                     </div>
                   </div>
 
@@ -115,13 +146,19 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                       <span className="inv-meta-label" style={{ textAlign: 'left' }}>Date:</span>
                       <strong style={{ color: '#0F172A' }}>{formatDateFormal(invoice.issue_date)}</strong>
                     </div>
+                    {invoice.due_date && (
+                      <div>
+                        <span className="inv-meta-label" style={{ textAlign: 'left' }}>Due Date:</span>
+                        <strong style={{ color: '#0F172A' }}>{formatDateFormal(invoice.due_date)}</strong>
+                      </div>
+                    )}
                     <div>
                       <span className="inv-meta-label" style={{ textAlign: 'left' }}>From:</span>
                       <span style={{ color: '#1E293B' }}>{settings.company_name || 'ZAZ Soft'} {settings.website || 'www.zazsoft.com'}</span>
                     </div>
                     <div>
                       <span className="inv-meta-label" style={{ textAlign: 'left' }}>Ref. No.:</span>
-                      <strong style={{ color: '#0F172A', letterSpacing: '0.05em' }}>{invoice.ref_no}</strong>
+                      <strong style={{ color: '#0F172A', letterSpacing: '0.05em' }}>{invoice.ref_no || 'N/A'}</strong>
                     </div>
                   </div>
                 </div>
@@ -137,35 +174,43 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item, idx) => (
-                      <tr key={item.id || idx}>
-                        <td className="text-center" style={{ fontWeight: 600, color: '#64748B' }}>
-                          {item.sr_no || idx + 1}
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600, color: '#0F172A' }}>{item.description}</div>
-                        </td>
-                        <td className="text-center">
-                          {Number(item.quantity).toFixed(0)}
-                        </td>
-                        <td className="text-right" style={{ fontWeight: 700 }}>
-                          {Number(item.total_amount).toLocaleString()} {currency}
+                    {items && items.length > 0 ? (
+                      items.map((item, idx) => (
+                        <tr key={item.id || idx}>
+                          <td className="text-center" style={{ fontWeight: 600, color: '#64748B' }}>
+                            {item.sr_no || idx + 1}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#0F172A' }}>{item.description}</div>
+                          </td>
+                          <td className="text-center">
+                            {Number(item.quantity || 1).toFixed(0)}
+                          </td>
+                          <td className="text-right" style={{ fontWeight: 700 }}>
+                            {Number(item.total_amount || (Number(item.quantity || 1) * Number(item.unit_price || 0))).toLocaleString()} {currency}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center" style={{ color: '#64748B', padding: '16px' }}>
+                          No line items specified.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                   <tfoot>
-                    {Number(invoice.tax_amount) > 0 && (
+                    {(hasTax || hasDiscount) && (
                       <tr>
                         <td colSpan="3" className="text-right" style={{ border: 'none', padding: '6px 14px', fontWeight: 600 }}>
                           Subtotal:
                         </td>
                         <td className="text-right" style={{ border: '1px solid #CBD5E1', padding: '6px 14px' }}>
-                          {Number(invoice.subtotal).toLocaleString()} {currency}
+                          {Number(invoice.subtotal || invoice.total_amount).toLocaleString()} {currency}
                         </td>
                       </tr>
                     )}
-                    {Number(invoice.tax_amount) > 0 && (
+                    {hasTax && (
                       <tr>
                         <td colSpan="3" className="text-right" style={{ border: 'none', padding: '6px 14px', fontWeight: 600 }}>
                           Tax ({invoice.tax_rate}%):
@@ -175,7 +220,7 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                         </td>
                       </tr>
                     )}
-                    {Number(invoice.discount_amount) > 0 && (
+                    {hasDiscount && (
                       <tr>
                         <td colSpan="3" className="text-right" style={{ border: 'none', padding: '6px 14px', fontWeight: 600, color: '#DC2626' }}>
                           Discount:
@@ -193,7 +238,7 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                         {Number(invoice.total_amount).toLocaleString()} {currency}
                       </td>
                     </tr>
-                    {Number(invoice.paid_amount) > 0 && (
+                    {hasPaid && (
                       <tr>
                         <td colSpan="3" className="text-right" style={{ border: 'none', padding: '6px 14px', fontWeight: 600, color: '#059669' }}>
                           Amount Paid:
@@ -203,7 +248,7 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                         </td>
                       </tr>
                     )}
-                    {Number(invoice.balance_due) > 0 && Number(invoice.paid_amount) > 0 && (
+                    {hasBalance && hasPaid && (
                       <tr>
                         <td colSpan="3" className="text-right" style={{ border: 'none', padding: '6px 14px', fontWeight: 700, color: '#DC2626' }}>
                           Balance Due:
@@ -234,11 +279,11 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                 )}
 
                 {/* Bank / Wire Transfer details if enabled */}
-                {settings.show_bank_details == 1 && settings.iban && (
-                  <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px 14px', borderRadius: '4px', marginBottom: '16px', fontSize: '0.8rem' }}>
+                {(settings.show_bank_details == 1 || settings.show_bank_details === true) && (settings.iban || settings.account_number) && (
+                  <div className="inv-bank-box" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '10px 14px', borderRadius: '4px', marginBottom: '16px', fontSize: '0.8rem' }}>
                     <strong style={{ color: '#0F172A', display: 'block', marginBottom: '4px' }}>Bank Transfer Details:</strong>
-                    <div>Bank: <strong>{settings.bank_name}</strong> | Title: <strong>{settings.account_title}</strong></div>
-                    <div>Account: <strong>{settings.account_number}</strong> | IBAN: <strong>{settings.iban}</strong> {settings.swift_code ? `| SWIFT: ${settings.swift_code}` : ''}</div>
+                    <div>Bank: <strong>{settings.bank_name || 'Meezan Bank Limited'}</strong> | Title: <strong>{settings.account_title || 'ZAZ Soft'}</strong></div>
+                    <div>Account: <strong>{settings.account_number || 'N/A'}</strong> | IBAN: <strong>{settings.iban || 'N/A'}</strong> {settings.swift_code ? `| SWIFT: ${settings.swift_code}` : ''}</div>
                   </div>
                 )}
 
@@ -259,7 +304,7 @@ export default function InvoicePrint({ invoiceData, onClose }) {
                   <div><strong>Address:</strong> {settings.address_pk || 'H 219, Molana Ahmad Ali Road, Ravi Road Lahore'}</div>
                 </div>
 
-                {settings.show_uae_address == 1 && (
+                {(settings.show_uae_address == 1 || settings.show_uae_address === true) && (
                   <div>
                     <div className="inv-footer-branch-title">UAE Office:</div>
                     <div><strong>Mail:</strong> {settings.email || 'zazimran@gmail.com'}</div>
